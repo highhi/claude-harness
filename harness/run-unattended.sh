@@ -67,6 +67,19 @@ if [ "$nchecks" -eq 0 ] && [ "$ALLOW_NO_CHECKS" -ne 1 ]; then
   die "no project checks configured. Edit harness/checks.conf (or pass --allow-no-checks, which removes the main safety net)"
 fi
 
+# integrity.sh compares the build branch with origin/<base>; an unpushed base
+# commit (e.g. the spec) would look like the builder changed protected paths.
+if git rev-parse --verify -q "origin/$BASE" >/dev/null; then
+  ahead="$(git rev-list --count "origin/$BASE..HEAD")"
+  [ "$ahead" -eq 0 ] || die "'$BASE' is $ahead commit(s) ahead of origin/$BASE; push it first (git push origin $BASE)"
+fi
+
+# CI runs the same checks on a clean machine; only harness/setup.sh (or the
+# workflow) installs their dependencies there.
+if [ ! -x "$HERE/setup.sh" ] && bash "$HERE/check.sh" --list | grep -Eq '\|[[:space:]]*(npm|npx|pnpm|yarn|bun|uv|poetry|pip|bundle|composer)[[:space:]]'; then
+  echo "run-unattended: warning: checks use a package manager but harness/setup.sh is missing; CI may not install dependencies (see .github/workflows/harness.yml)" >&2
+fi
+
 # --- worktree --------------------------------------------------------------------
 STATE="$(harness_state_dir)"
 WT="$STATE/worktrees/$(echo "$BRANCH" | tr '/' '-')"
