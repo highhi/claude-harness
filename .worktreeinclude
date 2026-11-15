@@ -1,0 +1,4 @@
+# Gitignored files copied into each new worktree (same syntax as .gitignore).
+# Keep this to small files; use worktree.symlinkDirectories for big ones.
+.env
+.env.local

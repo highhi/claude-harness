@@ -1,0 +1,11 @@
+# Paths the agent must not change on build branches (glob; * also matches /).
+# Enforced twice: the PreToolUse hook blocks Edit/Write on them up front, and
+# harness/integrity.sh fails the gate if they changed by any route (e.g. Bash).
+# Humans change these on the base branch, or in a PR labelled "harness-change".
+harness/*
+.claude/settings.json
+.claude/agents/*
+.claude/skills/*
+.github/workflows/*
+spec/SPEC.md
+CLAUDE.md

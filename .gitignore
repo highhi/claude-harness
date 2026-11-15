@@ -1,0 +1,11 @@
+# harness runtime state, logs and worktrees
+.harness/
+.claude/worktrees/
+
+# personal Claude Code settings
+CLAUDE.local.md
+.claude/settings.local.json
+
+.env
+.env.local
+.env.*.local

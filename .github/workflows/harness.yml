@@ -1,0 +1,32 @@
+name: harness
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Add your toolchain here (actions/setup-node, astral-sh/setup-uv, actions/setup-go ...).
+      # harness/setup.sh, if present and executable, installs dependencies.
+      - name: Setup
+        run: |
+          if [ -x harness/setup.sh ]; then ./harness/setup.sh; fi
+
+      - name: Harness gate
+        env:
+          HARNESS_BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
+          HARNESS_BASE_BRANCH: ${{ github.event.repository.default_branch }}
+          HARNESS_ALLOW_PROTECTED_CHANGES: ${{ contains(github.event.pull_request.labels.*.name, 'harness-change') && '1' || '0' }}
+        run: |
+          # On PRs, check out the head branch by name so integrity.sh treats it as a build branch.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git checkout -B "${{ github.head_ref }}" HEAD
+          fi
+          bash harness/check.sh
