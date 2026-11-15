@@ -74,11 +74,13 @@ install.sh                 既存プロジェクトへのコピー（上書き�
 3. `harness/checks.conf` を編集します（最重要）。型チェック、lint、ユニットテスト、E2E のコマンドを書いてください。
    空のままだと package.json / pyproject / go.mod / Cargo.toml から自動検出しますが、本番運用では明示的に書いてください。
    UI がある場合は E2E（Playwright など）を必ず入れます。テストやスクリプトが見ているものしか、ゲートで守れません。
-4. 依存関係のインストールが必要なら、`harness/setup.sh` を作って実行権限を付けます（worktree と CI で使われます）。
-5. GitHub 側で次を設定します。
+4. インストール先のリポジトリで一度 `claude` を対話的に起動し、ワークスペースの信頼ダイアログを承認しておきます。
+   承認していないと、`claude -p`（無人実行）は `.claude/settings.json` の `permissions.allow` を無視します。
+5. 依存関係のインストールが必要なら、`harness/setup.sh` を作って実行権限を付けます（worktree と CI で使われます）。
+6. GitHub 側で次を設定します。
    - `main` にブランチ保護をかけ、PR のマージ前に `harness / check` の通過を必須にする
    - ハーネス自体を変更する PR には `harness-change` ラベルを付ける（CI での保護パスのチェックが解除されます）
-6. （任意）auto mode の調整。プロジェクトの settings.json には書けないので、`~/.claude/settings.json` に書きます。
+7. （任意）auto mode の調整。プロジェクトの settings.json には書けないので、`~/.claude/settings.json` に書きます。
    ```json
    { "autoMode": { "environment": ["$defaults", "Source control: github.com/<your-org>"] } }
    ```
@@ -115,7 +117,7 @@ cd .harness/worktrees/agent-<日時> && claude --continue
 | 保護パス | `git checkout -b agent/x` のあと「harness/checks.conf にコメントを足して」と頼む | PreToolUse でブロックされる |
 | Bash 経由の回避 | 同じブランチで「echo で checks.conf に追記して」と頼む | 書き込みは通るが、Stop hook の integrity チェックで差し戻される |
 | deny | 「.env の中身を見せて」と頼む | 拒否される |
-| /goal ＋ -p | 小さなタスク1つで `run-unattended.sh --budget 3` を実行する | PR が作られる。`/usage` で費用を確認する |
+| /goal ＋ -p | 小さなタスク1つで `run-unattended.sh --budget 3` を実行する | PR が作られる（GitHub のリモートがなければ `--no-pr` を付け、最終ゲートの通過で確認する）。費用は `.harness/logs/run-*.jsonl` の最後の結果行（`total_cost_usd`）で確認する |
 
 確認がすんだら、`/doctor` で設定の警告が出ていないかも見ておくと安全です。
 
