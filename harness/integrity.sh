@@ -72,6 +72,69 @@ $changed
 EOF
       [ -n "$hits" ] && err "protected paths modified on a build branch:$hits  (restore them with: git checkout $base -- <path>)"
     fi
+
+    # Tests not weakened (harness/test-guard.conf): no deleted test files, no new
+    # skip/ignore markers, no loosened test/lint/type-check config.
+    GUARD="$HERE/test-guard.conf"
+    if [ "${HARNESS_ALLOW_PROTECTED_CHANGES:-0}" != "1" ] && [ -f "$GUARD" ]; then
+      guard_rules() {
+        grep -v '^[[:space:]]*#' "$GUARD" | sed -n "s/^[[:space:]]*$1[[:space:]]*|[[:space:]]*//p" | sed 's/[[:space:]]*$//'
+      }
+      # Prints each path from stdin that matches one of the globs in $1.
+      match_globs() {
+        local f p
+        while IFS= read -r f; do
+          [ -z "$f" ] && continue
+          while IFS= read -r p; do
+            [ -z "$p" ] && continue
+            # shellcheck disable=SC2053  # intentional glob match
+            if [[ "$f" == $p ]]; then echo "$f"; break; fi
+          done <<EOF
+$1
+EOF
+        done
+      }
+      hint="if a human approved this, rerun with HARNESS_ALLOW_PROTECTED_CHANGES=1 (CI: label the PR harness-change)"
+
+      # Deleted test files. Renames show up as R, not D, once the new path is tracked.
+      gone="$(git diff --name-only --diff-filter=D -M "$base" | match_globs "$(guard_rules test)" | tr '\n' ' ')"
+      [ -n "$gone" ] && err "test files deleted on a build branch: $gone (restore with: git checkout $base -- <path>; if you moved one, git add the new path; $hint)"
+
+      # Net new skip/ignore markers, in the diff and in untracked files.
+      MARKER_RE="$(guard_rules marker | sed 's/.*/(&)/' | paste -sd'|' -)"
+      if [ -n "$MARKER_RE" ]; then
+        scope=(. ':(exclude)harness' ':(exclude).claude' ':(exclude)spec' ':(exclude)*.md')
+        marked="$( {
+          git diff -U0 --no-color "$base" -- "${scope[@]}"
+          git ls-files --others --exclude-standard -z -- "${scope[@]}" | xargs -0 -I{} git diff -U0 --no-color --no-index /dev/null {} 2>/dev/null
+        } | MARKER_RE="$MARKER_RE" awk '
+          /^\+\+\+ / { file = substr($0, 7); next }
+          /^--- /    { next }
+          /^\+/ && substr($0, 2) ~ ENVIRON["MARKER_RE"] { add++; if (add <= 5) print "    + " file ": " substr($0, 2) }
+          /^-/  && substr($0, 2) ~ ENVIRON["MARKER_RE"] { del++ }
+          END { if (add > del) print "NET " add - del }')"
+        if printf '%s\n' "$marked" | grep -q '^NET '; then
+          err "skip/ignore markers added on a build branch ($(printf '%s\n' "$marked" | sed -n 's/^NET //p') net new). Make the code or test pass instead; $hint
+$(printf '%s\n' "$marked" | grep -v '^NET ')"
+        fi
+      fi
+
+      # Changed test/lint/type-check config that existed when the branch started.
+      loosened="$(git diff --name-only --diff-filter=MDR "$base" | match_globs "$(guard_rules config)" | tr '\n' ' ')"
+      [ -n "$loosened" ] && err "test/lint/type-check config changed on a build branch: $loosened (restore with: git checkout $base -- <path>; $hint)"
+
+      PY_TOOLS="$(guard_rules pyproject | paste -sd'|' -)"
+      if [ -n "$PY_TOOLS" ] && git cat-file -e "$base:pyproject.toml" 2>/dev/null; then
+        tool_sections() {
+          SEC_RE="^[[:space:]]*\\[\\[?tool\\.($PY_TOOLS)([].]|$)" awk '
+            /^[[:space:]]*\[/ { insec = ($0 ~ ENVIRON["SEC_RE"]) }
+            insec && $0 !~ /^[[:space:]]*(#|$)/ { print }'
+        }
+        before_py="$(git show "$base:pyproject.toml" | tool_sections)"
+        after_py="$( { [ -f pyproject.toml ] && cat pyproject.toml; } | tool_sections)"
+        [ "$before_py" != "$after_py" ] && err "pyproject.toml [tool.$PY_TOOLS] sections changed on a build branch (restore them from $base; $hint)"
+      fi
+    fi
   fi
 fi
 

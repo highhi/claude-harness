@@ -74,6 +74,12 @@ the PR.
 - **harness/checks.conf**: list the typecheck, lint, unit and e2e commands explicitly. For a new
   project, list the commands the builder will create (they fail until it does, which is the
   point); auto-detection finds nothing before a manifest exists. If the spec has UI, include e2e.
+  Pin strictness and test selection in the command, not in project config the builder can edit:
+  call the tool directly rather than through a package.json script, pass strict flags, name the
+  test paths, and neutralize config options that could deselect tests, e.g.
+  `uv run mypy --strict src tests`, `uv run pytest -q -o addopts= tests`,
+  `npx tsc --noEmit --strict`. integrity.sh only guards config files that already exist, so on a
+  first build these commands are the only thing that keeps the checks strict.
 - **harness/setup.sh**: write it for the chosen stack and `chmod +x` it. It installs packages and
   tools the checks need (e.g. E2E browsers) and runs in each build worktree and in CI. Guard it
   on the manifest so it is a no-op until the builder creates one, e.g.

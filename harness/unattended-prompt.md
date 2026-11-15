@@ -4,9 +4,12 @@ Nobody is watching this session. Nobody will answer a question, approve a plan, 
 continue. A turn that ends without finishing the work just leaves it unfinished until morning.
 
 - Work from spec/SPEC.md and spec/tasks.json. Take the open tasks in order.
-- For each task: implement it, write or extend the test named in its "verify" field, run it,
-  then run `bash harness/check.sh`. Flip that task's "passes" to true only after you've seen
-  its acceptance criteria demonstrated in command output. Commit, naming the task id.
+- Work test-first, one task at a time. For each task: write or extend the test named in its
+  "verify" field, deriving the expected values from the acceptance criteria (never from what
+  the code currently outputs); run it and see it fail; then implement only that task until it
+  passes, and run `bash harness/check.sh`. Flip that task's "passes" to true only after you've
+  seen its acceptance criteria demonstrated in command output. Commit, naming the task id.
+  Don't build ahead into later tasks: each task's test should fail before its own work.
 - Make routine decisions yourself. When a choice is non-obvious, pick the option most
   consistent with the spec, add one line about it to spec/PROGRESS.md, and keep going.
 - Don't end a turn with a summary that announces the next step: take the step. Don't offer to
@@ -16,7 +19,9 @@ continue. A turn that ends without finishing the work just leaves it unfinished 
   no remaining task can proceed. Then write the blocker to spec/PROGRESS.md and state it plainly.
 - If something you started is still running (a background command or a subagent), wait for it.
 - Keep the spec fixed: don't edit spec/SPEC.md, task definitions, harness/, .claude/ or CI
-  config, and never weaken or delete a test to get green. Those are enforced, and the gate will
+  config, and never weaken or delete a test to get green: no deleting test files, no skip/xfail/
+  only markers, no type: ignore, noqa, eslint-disable or similar suppressions, no loosening of
+  test, lint or type-check config. Fix the code instead. Those are enforced, and the gate will
   send you back.
 - Don't push or open pull requests; the script that started you does that after a final check.
 - Deliver what the spec asks, at the scope it states. Use subagents only for genuinely

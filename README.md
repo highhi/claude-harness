@@ -15,7 +15,7 @@ Claude Code に、人の確認なしで「仕様 → 実装 → テスト → �
 | 何を作るか | `spec/SPEC.md` と `spec/tasks.json`（受け入れ基準と `passes` フラグ） | 外部ファイル |
 | 終わったと言えるか | `harness/check.sh` が exit 0 になること。Stop hook、無人実行の最終ゲート、CI の3か所で同じスクリプトを使う | 決定的 |
 | 最後まで止まらずに進むか | `/goal`（毎ターン、別のモデルが完了条件を判定する）＋ 無人実行用の追加システムプロンプト | モデルが判定 |
-| ゴールポストを動かさないか | `harness/integrity.sh`：ビルドブランチでは、タスク定義と保護パスを書き換えると失敗する（Bash 経由の書き換えも検出） | 決定的 |
+| ゴールポストを動かさないか | `harness/integrity.sh`：ビルドブランチでは、タスク定義と保護パスを書き換えると失敗する（Bash 経由の書き換えも検出）。テストファイルの削除、skip や ignore の追加、テスト・lint・型チェックの設定の緩和も失敗にする（`harness/test-guard.conf`） | 決定的 |
 | 触ってはいけないもの | deny ルール（秘密情報・force push）、PreToolUse hook（保護パス）、auto mode | 決定的＋分類器 |
 | 使いすぎないか | `--max-budget-usd`、`--max-turns`、サブエージェントの数と深さの上限 | 決定的 |
 | 最終判断 | ハーネスが PR を作成し、人がマージする | 人 |
@@ -53,7 +53,8 @@ Claude Code に、人の確認なしで「仕様 → 実装 → テスト → �
 harness/
   check.sh                 完了の唯一の定義（checks.conf、または自動検出＋integrity）
   checks.conf              ★ プロジェクトのチェックコマンドをここに書く
-  integrity.sh             tasks.json の改ざん検知、保護パスの変更検知
+  integrity.sh             tasks.json の改ざん検知、保護パスの変更検知、テストを弱めた形跡の検知
+  test-guard.conf          「テストを弱めた」とみなすパターン（テストファイル、skip などのマーカー、設定ファイル）
   protected-paths.txt      ビルドブランチでエージェントが変更できないパス
   goal.md                  /goal の完了条件テンプレート
   unattended-prompt.md     無人実行時に追加するシステムプロンプト（早期停止の防止など）
