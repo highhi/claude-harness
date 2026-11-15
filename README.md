@@ -8,7 +8,7 @@ Claude Code に、人の確認なしで「仕様 → 実装 → テスト → �
 
 ## 考え方
 
-**「完了」の判定をモデルに任せず、決定的に（スクリプトで必ず同じ結果になるように）定義する。** それ以外は、できるだけ Claude Code 本体とモデルに任せます。
+「完了」の判定をモデルに任せず、決定的に（スクリプトで必ず同じ結果になるように）定義します。それ以外はできるだけ Claude Code 本体とモデルに任せます。
 
 | 何を | どう実現するか | 種類 |
 |---|---|---|
@@ -67,18 +67,18 @@ install.sh                 既存プロジェクトへのコピー（上書き�
 ## セットアップ
 
 1. 必要なもの：Claude Code（最新版）、`git`、`jq`、PR の自動作成に使う `gh`（任意）
-2. プロジェクトへのインストール：
+2. 次のコマンドでプロジェクトにインストールします。
    ```bash
    ./install.sh /path/to/your/project
    ```
-3. **`harness/checks.conf` を編集します（最重要）。** 型チェック、lint、ユニットテスト、E2E のコマンドを書いてください。
+3. `harness/checks.conf` を編集します（最重要）。型チェック、lint、ユニットテスト、E2E のコマンドを書いてください。
    空のままだと package.json / pyproject / go.mod / Cargo.toml から自動検出しますが、本番運用では明示的に書いてください。
    UI がある場合は E2E（Playwright など）を必ず入れます。テストやスクリプトが見ているものしか、ゲートで守れません。
 4. 依存関係のインストールが必要なら、`harness/setup.sh` を作って実行権限を付けます（worktree と CI で使われます）。
-5. GitHub 側の設定：
+5. GitHub 側で次を設定します。
    - `main` にブランチ保護をかけ、PR のマージ前に `harness / check` の通過を必須にする
    - ハーネス自体を変更する PR には `harness-change` ラベルを付ける（CI での保護パスのチェックが解除されます）
-6. （任意）auto mode の調整。プロジェクトの settings.json には書けないので、`~/.claude/settings.json` に書きます：
+6. （任意）auto mode の調整。プロジェクトの settings.json には書けないので、`~/.claude/settings.json` に書きます。
    ```json
    { "autoMode": { "environment": ["$defaults", "Source control: github.com/<your-org>"] } }
    ```
@@ -106,7 +106,7 @@ cd .harness/worktrees/agent-<日時> && claude --continue
 ## 動作確認（ローカルの Claude Code で一度実行してください）
 
 `check.sh`、`integrity.sh`、各 hook のスクリプト、`run-unattended.sh` は、ダミーのエージェントを使ってテスト済みです。
-ただし **hook の発火と `/goal` の動作は、Claude Code 本体で確認する必要があります。** 新しいリポジトリにインストールしたら、次を確認してください。
+ただし hook の発火と `/goal` の動作は、Claude Code 本体で確認する必要があります。新しいリポジトリにインストールしたら、次を確認してください。
 
 | 確認すること | 方法 | 期待する結果 |
 |---|---|---|
@@ -123,23 +123,23 @@ cd .harness/worktrees/agent-<日時> && claude --continue
 
 2025〜2026年前半の記事でよく紹介されていたものの、現在のモデルと Claude Code では不要か逆効果とされているものです。
 
-- **コンテキストのリセットと引き継ぎ用エージェント**：1M トークンのコンテキストと自動 compaction で足ります。状態の外部化は `spec/` で行います。
-- **スプリント契約、Planner / Generator / Evaluator の細かい役割分担**：Opus 5 以降はモデルが自分で計画し、必要に応じて委任します。委任が有効なのは、独立した大きな作業だけです。
-- **「最後に検証して」「サブエージェントで確認して」といったプロンプト**：過剰な検証を招くだけです。検証はハーネス側のゲートと、最後に1回だけ行うレビューに任せます。
-- **「IMPORTANT」の強調、「think hard」の指示**：守られない指示は hook に移し、思考の深さは effort 設定で調整します。
+- コンテキストのリセットと引き継ぎ用エージェント：1M トークンのコンテキストと自動 compaction で足ります。状態の外部化は `spec/` で行います。
+- スプリント契約、Planner / Generator / Evaluator の細かい役割分担：Opus 5 以降はモデルが自分で計画し、必要に応じて委任します。委任が有効なのは、独立した大きな作業だけです。
+- 「最後に検証して」「サブエージェントで確認して」といったプロンプト：過剰な検証を招くだけです。検証はハーネス側のゲートと、最後に1回だけ行うレビューに任せます。
+- 「IMPORTANT」の強調、「think hard」の指示：守られない指示は hook に移し、思考の深さは effort 設定で調整します。
 
 ## 見直し方
 
-各部品は「モデルが単独ではできないこと」という前提を表しています。新しいモデルが出たら、**1つずつ外して**結果を比べてください（まとめて外すと、何が効いていたのか分からなくなります）。
+各部品は「モデルが単独ではできないこと」という前提を表しています。新しいモデルが出たら、1つずつ外して結果を比べてください（まとめて外すと、何が効いていたのか分からなくなります）。
 外してよい候補は `unattended-prompt.md` の早期停止対策、spec-reviewer、サブエージェントの上限です。`check.sh` と `integrity.sh` は外さないでください。
 
 ## 参考
 
-- Claude Code best practices — https://code.claude.com/docs/en/best-practices
-- /goal — https://code.claude.com/docs/en/goal
-- Prompting Claude Opus 5.5（早期停止、時間予算、effort）— https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5
-- Prompting Claude Opus 5（検証の指示を削る、委任の制御）— https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5
-- Harness design for long-running application development（Anthropic, 2026-03）— https://www.anthropic.com/engineering/harness-design-long-running-apps
-- Effective harnesses for long-running agents（Anthropic, 2025-11）— https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents
-- Harness engineering（OpenAI, 2026-02）— https://openai.com/index/harness-engineering/
-- Redesigning source control at Anthropic（2026-10）— https://www.anthropic.com/engineering/redesigning-source-control
+- Claude Code best practices：https://code.claude.com/docs/en/best-practices
+- /goal：https://code.claude.com/docs/en/goal
+- Prompting Claude Opus 5.5（早期停止、時間予算、effort）：https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5
+- Prompting Claude Opus 5（検証の指示を削る、委任の制御）：https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5
+- Harness design for long-running application development（Anthropic, 2026-03）：https://www.anthropic.com/engineering/harness-design-long-running-apps
+- Effective harnesses for long-running agents（Anthropic, 2025-11）：https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents
+- Harness engineering（OpenAI, 2026-02）：https://openai.com/index/harness-engineering/
+- Redesigning source control at Anthropic（2026-10）：https://www.anthropic.com/engineering/redesigning-source-control
