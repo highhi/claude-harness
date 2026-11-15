@@ -32,10 +32,7 @@
     "SessionStart": [
       {
         "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/harness/hooks/session-start.sh\""
-          }
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/harness/hooks/session-start.sh\"" }
         ]
       }
     ],
@@ -55,10 +52,7 @@
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/harness/hooks/format.sh\""
-          }
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/harness/hooks/format.sh\"" }
         ]
       }
     ],
