@@ -23,10 +23,13 @@ Claude Code に、人の確認なしで「仕様 → 実装 → テスト → �
 ## 流れ
 
 ```
-[人] /spec <作りたいもの>           ← 対話で仕様を固める（人が関わるのは基本ここだけ）
-        │ spec/SPEC.md, spec/tasks.json, harness/checks.conf を main にコミット
+[人] /spec <作りたいもの>           ← 質問に答えて仕様を固める（人が関わるのは基本ここだけ）
+        │ インタビューのあとは /spec が自動で進める:
+        │   spec/SPEC.md, spec/tasks.json, harness/checks.conf, harness/setup.sh, CI のランタイムを用意
+        │   main にコミットして push（リモートがなければ private リポジトリを作成）
+        │   run-unattended.sh をバックグラウンドで起動
         ▼
-[無人] bash harness/run-unattended.sh --budget 30
+[無人] bash harness/run-unattended.sh --budget <インタビューで決めた上限>
         │ 1. 事前チェック（作業ツリーがクリーン、未完了タスクあり、チェックが定義済み）
         │ 2. worktree と新しいブランチ agent/<日時> を作る
         │ 3. claude -p "/goal <完了条件>" --permission-mode auto
@@ -67,20 +70,18 @@ install.sh                 既存プロジェクトへのコピー（上書き�
 ## セットアップ
 
 1. 必要なもの：Claude Code（最新版）、`git`、`jq`、PR の自動作成に使う `gh`（任意）
-2. 次のコマンドでプロジェクトにインストールします。
+2. 次のコマンドでプロジェクトにインストールします。新規アプリなら、存在しないディレクトリを指定すれば作成と `git init` までします。
    ```bash
    ./install.sh /path/to/your/project
    ```
-3. `harness/checks.conf` を編集します（最重要）。型チェック、lint、ユニットテスト、E2E のコマンドを書いてください。
-   空のままだと package.json / pyproject / go.mod / Cargo.toml から自動検出しますが、本番運用では明示的に書いてください。
-   UI がある場合は E2E（Playwright など）を必ず入れます。テストやスクリプトが見ているものしか、ゲートで守れません。
-4. インストール先のリポジトリで一度 `claude` を対話的に起動し、ワークスペースの信頼ダイアログを承認しておきます。
+3. インストール先で `claude` を対話的に起動し、ワークスペースの信頼ダイアログを承認します。
    承認していないと、`claude -p`（無人実行）は `.claude/settings.json` の `permissions.allow` を無視します。
-5. 依存関係のインストールが必要なら、`harness/setup.sh` を作って実行権限を付けます（worktree と CI で使われます）。
-6. GitHub 側で次を設定します。
-   - `main` にブランチ保護をかけ、PR のマージ前に `harness / check` の通過を必須にする
-   - ハーネス自体を変更する PR には `harness-change` ラベルを付ける（CI での保護パスのチェックが解除されます）
-7. （任意）auto mode の調整。プロジェクトの settings.json には書けないので、`~/.claude/settings.json` に書きます。
+   あとは「使い方」のとおり `/spec` を起動するだけです。
+   `harness/checks.conf`（完了の定義）、`harness/setup.sh`（worktree と CI での依存関係のインストール）、CI のランタイム設定は `/spec` が作ります。
+   既存プロジェクトで自分で書いておいた場合は、`/spec` がそれを確認して足りない分を補います。
+4. （任意）GitHub 側で `main` にブランチ保護をかけ、PR のマージ前に `harness / check` の通過を必須にします。
+   `/spec` がリポジトリを作った場合は `harness-change` ラベルも作られます。ハーネス自体を変更する PR にこのラベルを付けると、CI での保護パスのチェックが解除されます。
+5. （任意）auto mode の調整。プロジェクトの settings.json には書けないので、`~/.claude/settings.json` に書きます。
    ```json
    { "autoMode": { "environment": ["$defaults", "Source control: github.com/<your-org>"] } }
    ```
@@ -88,11 +89,15 @@ install.sh                 既存プロジェクトへのコピー（上書き�
 ## 使い方
 
 ```bash
-# 1. main で Claude Code を起動して仕様を作る
+# 1. main で Claude Code を起動して /spec を実行し、質問に答える
 claude
 > /spec ログイン付きの TODO アプリ。タグで絞り込みができる
+#    インタビューが終わると /spec が push まで進め、無人実行をバックグラウンドで起動する
+#    （数時間かかることがあります。進み具合は .harness/launch.log と .harness/logs/ で確認）
 
-# 2. 無人で作らせる（数時間かかることがあります。ログは .harness/logs/ に出力）
+# 2. 終わると PR が作られる。レビューしてマージする
+
+# 無人実行を手で起動し直す場合
 bash harness/run-unattended.sh --budget 30
 
 # 様子を見ながら実行したい場合（worktree 内で対話セッションとして /goal を開始）

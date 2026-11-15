@@ -1,13 +1,16 @@
 ---
 name: spec
-description: Turn a short product idea into spec/SPEC.md and a machine-checkable spec/tasks.json by interviewing the user. Run on the base branch before an unattended build.
+description: Turn a short product idea into spec/SPEC.md and a machine-checkable spec/tasks.json by interviewing the user, set up checks, dependencies and CI, push, and start the unattended build. Run on the base branch.
 disable-model-invocation: true
 argument-hint: <one to four sentences describing what to build>
+allowed-tools: Bash(git add *) Bash(git commit *) Bash(git push *) Bash(git remote *) Bash(gh auth status*) Bash(gh repo create *) Bash(gh label create *) Bash(bash harness/check.sh*) Bash(chmod +x harness/setup.sh) Bash(mkdir -p .harness) Bash(nohup bash harness/run-unattended.sh *)
 ---
 # /spec — write the definition of done
 
-This is the one step of the harness where a human is expected to answer questions. Everything
-after it runs unattended against what you write here, so the spec must be complete enough that
+This is the one step of the harness where a human is expected to answer questions. Answering
+the interview is all the human does: after it you set up everything the build needs, push, and
+start the unattended build yourself, without asking for confirmation. Everything after the
+interview runs unattended against what you write here, so the spec must be complete enough that
 a builder never needs to ask. The idea to work from: $ARGUMENTS
 
 ## 1. Interview
@@ -22,6 +25,8 @@ the spec without guessing. Cover:
 - Non-goals: what is deliberately out
 - Constraints only they know: stack choices, libraries to avoid, data, deploy target
 - How a person would check each feature by hand; this becomes the acceptance criteria
+- Spending cap for the unattended build in USD (offer 10 / 30 / 60; 30 fits a small app of
+  6-10 tasks)
 
 Stop asking when the answers add up to a spec. Don't ask about implementation details the
 builder can decide.
@@ -59,28 +64,47 @@ Rules:
 - All tasks start with "passes": false. On build branches the builder may only flip "passes";
   harness/integrity.sh rejects any other change.
 
-## 4. Make sure the checks can see the work
+## 4. Make sure the checks, dependencies and CI are ready
 
-Open harness/checks.conf. If the project's typecheck, lint, unit and e2e commands aren't listed
-(or reliably auto-detected), add them, since harness/check.sh is the gate the build has to pass.
-For a new project, list the commands the builder will create (they will fail until it does,
-which is the point).
+Do all of this yourself; don't hand any of it to the user. The builder can't do it later:
+harness/ and .github/workflows/ are protected on build branches. And because its local gate
+runs on a machine that already has the dependencies, a gap shows up only as a red CI run on
+the PR.
 
-Then make sure CI can run those checks too. Read .github/workflows/ and confirm the job installs
-everything the checks need: language runtime, packages, and tools such as E2E browsers. The
-builder can't fix this later (harness/ and .github/workflows/ are protected on build branches),
-and its local gate passes on a machine that already has the dependencies, so a gap shows up only
-as a red CI run on the PR. If something is missing, create an executable harness/setup.sh (the
-workflow and run-unattended.sh both run it) or add a setup step to the workflow. For a new
-project, write it against the manifest the builder will create, guarded so it is a no-op until
-the manifest exists, e.g. `[ -f package.json ] && npm ci && npx playwright install --with-deps chromium`.
+- **harness/checks.conf**: list the typecheck, lint, unit and e2e commands explicitly. For a new
+  project, list the commands the builder will create (they fail until it does, which is the
+  point); auto-detection finds nothing before a manifest exists. If the spec has UI, include e2e.
+- **harness/setup.sh**: write it for the chosen stack and `chmod +x` it. It installs packages and
+  tools the checks need (e.g. E2E browsers) and runs in each build worktree and in CI. Guard it
+  on the manifest so it is a no-op until the builder creates one, e.g.
+  `if [ -f package.json ]; then npm ci && npx playwright install --with-deps chromium; fi`.
+  Name the package manager and the lockfile the builder must commit in SPEC.md's constraints so
+  the two agree.
+- **.github/workflows/harness.yml**: add the language runtime setup step (actions/setup-node,
+  astral-sh/setup-uv, actions/setup-go, ...) before "Setup" when the stack needs one, pinned to
+  the version you named in the spec.
+- Run `bash harness/check.sh --list` and confirm it shows the project checks.
 
-## 5. Hand off
+## 5. Push and start the build
 
-Show the user a short summary: number of tasks, the checks that define done, and anything you
-had to assume. After they confirm, commit spec/SPEC.md, spec/tasks.json and harness/checks.conf
-(and harness/setup.sh or workflow changes, if any) on the base branch, and push it if there is a
-remote. integrity.sh compares build branches with origin/<base>, so an unpushed spec commit
-looks like the builder changed the spec. Then tell them the next step:
+Don't wait for confirmation; the interview was the confirmation.
 
-    bash harness/run-unattended.sh --budget 30
+1. Commit spec/SPEC.md, spec/tasks.json, harness/checks.conf, harness/setup.sh and any workflow
+   change on the base branch. On a fresh install the harness files and .gitignore are still
+   uncommitted; commit them too (in a separate commit first). run-unattended.sh needs a clean
+   working tree.
+2. Make sure there is a remote. If `git remote` shows none and `gh auth status` succeeds, create
+   a private repository: `gh repo create <dir name> --private --source . --push`, then
+   `gh label create harness-change --description "Changes the harness itself"`. If gh isn't
+   available, skip the remote and add `--no-pr` below.
+3. Push the base branch. integrity.sh compares build branches with origin/<base>, so an unpushed
+   spec commit looks like the builder changed the spec, and run-unattended.sh refuses to start.
+4. Start the build in the background so it outlives this session:
+
+       mkdir -p .harness && nohup bash harness/run-unattended.sh --budget <cap> > .harness/launch.log 2>&1 < /dev/null &
+
+   Wait a few seconds and read .harness/launch.log. If preflight failed, fix the cause on the
+   base branch, commit, push, and start it again.
+5. Finish with a short summary: number of tasks, the checks that define done, anything you had
+   to assume, the budget, and where to watch (.harness/launch.log, .harness/logs/). The human's
+   next step is reviewing the PR.
