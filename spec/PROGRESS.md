@@ -6,3 +6,4 @@ Append-only. One line per entry: date, task id, what was decided or what failed 
 - 2026-11-15 warikan セッションからの報告で改善: /spec に CI の依存インストール確認と base の push を追記し、run-unattended.sh の preflight に「origin より先行なら停止」「setup.sh なしでパッケージマネージャ系チェックなら警告」を追加。先行は integrity の誤検出で実行が無駄になるため警告でなく停止にした。
 - 2026-11-15 ユーザー判断でテンプレートの ask から git push を削除（push まではエージェントが進めてよい方針）。force push の deny と gh pr merge の ask は残した。
 - 2026-11-15 人の作業を「/spec の質問に答える」だけにする方針: /spec が checks.conf・setup.sh・CI ランタイムを用意し、確認待ちなしで commit・push（リモートなしなら gh で private リポジトリ作成）・run-unattended のバックグラウンド起動まで行う。セッション終了後も続くよう nohup で起動。install.sh は未作成・非 git のディレクトリなら git init する。
+- 2026-11-15 install.sh が spec/PROGRESS.md（このリポジトリ自身の開発ログ）をそのままコピーし、jikan の PR に warikan などの記録が混入していた。インストール先にはヘッダーだけの空ログを作るよう変更。

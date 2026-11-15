@@ -30,8 +30,17 @@ copy() {
 
 cd "$SRC"
 for f in $(git ls-files harness .claude spec .github/workflows/harness.yml CLAUDE.md .worktreeinclude); do
+  # spec/PROGRESS.md here is this harness's own log; the project gets an empty one.
+  [ "$f" = spec/PROGRESS.md ] && continue
   copy "$f"
 done
+if [ -e "$DEST/spec/PROGRESS.md" ]; then
+  echo "skip (exists): spec/PROGRESS.md"
+else
+  mkdir -p "$DEST/spec"
+  sed -n '1,/^Append-only/p' "$SRC/spec/PROGRESS.md" >"$DEST/spec/PROGRESS.md"
+  echo "added: spec/PROGRESS.md (empty log)"
+fi
 chmod +x "$DEST"/harness/*.sh "$DEST"/harness/hooks/*.sh 2>/dev/null || true
 
 if ! grep -q '^\.harness/' "$DEST/.gitignore" 2>/dev/null; then
