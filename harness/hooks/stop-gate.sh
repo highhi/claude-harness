@@ -29,6 +29,22 @@ fingerprint() {
   } | sha256_stdin
 }
 
+# On the base branch with open tasks, the build hasn't happened yet (e.g. right
+# after /spec): project checks are red by design until the build PR merges, so
+# only the integrity checks gate the turn. Build branches always get the full gate.
+if ! on_build_branch && [ -f spec/tasks.json ] \
+  && jq -e '[.tasks[]? | select(.passes | not)] | length > 0' spec/tasks.json >/dev/null 2>&1; then
+  if out="$(bash "$HERE/integrity.sh" 2>&1)"; then
+    exit 0
+  fi
+  {
+    echo "The harness integrity check is failing on $(base_branch)."
+    echo
+    echo "$out"
+  } >&2
+  exit 2
+fi
+
 fp=""
 if git rev-parse --git-dir >/dev/null 2>&1; then
   fp="$(fingerprint)"

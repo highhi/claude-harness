@@ -8,3 +8,4 @@ Append-only. One line per entry: date, task id, what was decided or what failed 
 - 2026-11-15 人の作業を「/spec の質問に答える」だけにする方針: /spec が checks.conf・setup.sh・CI ランタイムを用意し、確認待ちなしで commit・push（リモートなしなら gh で private リポジトリ作成）・run-unattended のバックグラウンド起動まで行う。セッション終了後も続くよう nohup で起動。install.sh は未作成・非 git のディレクトリなら git init する。
 - 2026-11-15 install.sh が spec/PROGRESS.md（このリポジトリ自身の開発ログ）をそのままコピーし、jikan の PR に warikan などの記録が混入していた。インストール先にはヘッダーだけの空ログを作るよう変更。
 - 2026-11-15 jikan セッションの依頼でテスト弱体化の検知を追加（integrity.sh＋harness/test-guard.conf、jikan の複製で a〜d と未追跡ファイルの skip を拒否、移動・書き換え・新規テストは通過を確認）。マーカーは追加数が削除数を上回ったら失敗（移動は通す）。初回ビルドで新規コードに noqa 等を書くのも失敗になるが、人の許可（harness-change）で逃がせるので厳しい側に倒した。spec-reviewer には git diff を読むため Bash を追加（読み取り専用と指示）。
+- 2026-11-16 mijika で /spec セッションが終われなくなった: 無人ビルド起動後、main の Stop hook がまだ存在しないコードのチェック失敗で差し戻し続けた。base ブランチで未完了タスクがある間は Stop hook を integrity だけにした（ビルドブランチと全タスク完了後の main は従来どおり全チェック）。
