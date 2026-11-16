@@ -2,7 +2,7 @@
 <!-- One or two lines: what this is and who it's for. Delete this comment. -->
 
 # Verify
-- Everything that defines done: `bash harness/check.sh` (the Stop hook runs it; a red gate sends you back to work)
+- Everything that defines done: `bash harness/check.sh` (on agent/* branches and unattended runs the Stop hook runs it; a red gate sends you back to work)
 - Run a single test: <!-- e.g. pnpm vitest run path/to/file.test.ts -->
 - Install / setup: <!-- e.g. pnpm install -->
 

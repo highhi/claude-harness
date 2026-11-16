@@ -108,9 +108,11 @@ bash harness/run-unattended.sh --interactive
 cd .harness/worktrees/agent-<日時> && claude --continue
 ```
 
-ふだんの対話的な作業でも、Stop hook がそのまま効きます。会話だけで変更がないターンでは、前回成功したときから作業ツリーが変わっていなければチェックを省略します。
-ただし main（base ブランチ）で未完了のタスクが残っている間は、ビルド前とみなして integrity チェックだけを判定します。`/spec` の直後はコードがまだなく、チェックが赤いのが正常だからです。
-重すぎる場合は `HARNESS_GATE=off claude` で、そのセッションだけゲートを外せます。
+Stop hook が効くのは、無人実行中と `agent/` ブランチだけです（`claude --continue` で再開したときも効きます）。
+main や人が切ったブランチでの対話的な作業では、チェックが赤くてもターンを終えられます。`/spec` の直後の main は、コードがまだないのでチェックが赤いのが正常だからです。
+ほかのブランチでもゲートを使いたい場合は `HARNESS_GATE=on claude`、無人実行の再開時に外したい場合は `HARNESS_GATE=off claude` で起動します。
+会話だけで変更がないターンでは、前回成功したときから作業ツリーが変わっていなければチェックを省略します。
+integrity チェックと CI は、ブランチに関係なくこれまでどおり効きます。
 
 ## 見直し方
 

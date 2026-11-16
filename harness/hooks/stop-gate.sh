@@ -2,10 +2,17 @@
 # Stop hook: Claude can't end its turn while harness/check.sh is red.
 # Exit 2 + stderr sends Claude back to work with the failure output.
 #
+# It gates only the builder: unattended runs (HARNESS_RUN=1, set by
+# run-unattended.sh) and agent/* branches (e.g. resuming a run with
+# `claude --continue`). Elsewhere, such as main right after /spec or a human's
+# own branch, red checks are often expected, so it stays out of the way.
+#   HARNESS_GATE=on   gate this session on any branch
+#   HARNESS_GATE=off  never gate this session
+#
 # To stay cheap in conversation-only turns, it skips the run when the working
 # tree is byte-identical to the last state that passed.
-# Disable for a session by launching Claude Code with HARNESS_GATE=off
-# (an env var the agent can't change from inside the session).
+# HARNESS_GATE is read from the environment Claude Code was launched with,
+# which the agent can't change from inside the session.
 set -u
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
@@ -14,7 +21,18 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"
 
 cat >/dev/null  # hook input JSON is not needed
 
-[ "${HARNESS_GATE:-on}" = "off" ] && exit 0
+case "${HARNESS_GATE:-auto}" in
+  off) exit 0 ;;
+  on) ;;
+  *)
+    if [ "${HARNESS_RUN:-0}" != "1" ]; then
+      case "$(git -C "$(harness_root)" rev-parse --abbrev-ref HEAD 2>/dev/null)" in
+        agent/*) ;;
+        *) exit 0 ;;
+      esac
+    fi
+    ;;
+esac
 
 ROOT="$(harness_root)"
 cd "$ROOT" || exit 0
@@ -28,22 +46,6 @@ fingerprint() {
       | while IFS= read -r -d '' f; do printf '%s\0' "$f"; cat -- "$f" 2>/dev/null; done
   } | sha256_stdin
 }
-
-# On the base branch with open tasks, the build hasn't happened yet (e.g. right
-# after /spec): project checks are red by design until the build PR merges, so
-# only the integrity checks gate the turn. Build branches always get the full gate.
-if ! on_build_branch && [ -f spec/tasks.json ] \
-  && jq -e '[.tasks[]? | select(.passes | not)] | length > 0' spec/tasks.json >/dev/null 2>&1; then
-  if out="$(bash "$HERE/integrity.sh" 2>&1)"; then
-    exit 0
-  fi
-  {
-    echo "The harness integrity check is failing on $(base_branch)."
-    echo
-    echo "$out"
-  } >&2
-  exit 2
-fi
 
 fp=""
 if git rev-parse --git-dir >/dev/null 2>&1; then
