@@ -59,6 +59,7 @@ harness/
   goal.md                  /goal の完了条件テンプレート
   unattended-prompt.md     無人実行時に追加するシステムプロンプト（早期停止の防止など）
   run-unattended.sh        無人実行のオーケストレーション
+  watch.sh                 無人実行の途中経過を読みやすく表示する
   hooks/                   stop-gate / protect-paths / session-start / format
   setup.sh                 （任意）依存関係のインストール。worktree と CI で実行される
 spec/
@@ -103,6 +104,10 @@ bash harness/run-unattended.sh --budget 30
 
 # 様子を見ながら実行したい場合（worktree 内で対話セッションとして /goal を開始）
 bash harness/run-unattended.sh --interactive
+
+# 途中経過を見る（エージェントの発言、実行したコマンド、タスクの進み具合、最後に費用）
+bash harness/watch.sh          # 終わるまで流し続ける（Ctrl-C で抜けても実行は止まらない）
+bash harness/watch.sh --once   # 今の状態だけ表示
 
 # 3. 失敗したり止まったりした場合
 cd .harness/worktrees/agent-<日時> && claude --continue

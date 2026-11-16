@@ -112,5 +112,5 @@ Don't wait for confirmation; the interview was the confirmation.
    Wait a few seconds and read .harness/launch.log. If preflight failed, fix the cause on the
    base branch, commit, push, and start it again.
 5. Finish with a short summary: number of tasks, the checks that define done, anything you had
-   to assume, the budget, and where to watch (.harness/launch.log, .harness/logs/). The human's
+   to assume, the budget, and how to watch it (`bash harness/watch.sh`). The human's
    next step is reviewing the PR.

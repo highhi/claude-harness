@@ -9,7 +9,9 @@ continue. A turn that ends without finishing the work just leaves it unfinished 
   the code currently outputs); run it and see it fail; then implement only that task until it
   passes, and run `bash harness/check.sh`. Flip that task's "passes" to true only after you've
   seen its acceptance criteria demonstrated in command output. Commit, naming the task id.
-  Don't build ahead into later tasks: each task's test should fail before its own work.
+  Don't build ahead into later tasks: each task's test should fail before its own work. If an
+  earlier task already implemented the behavior and the new test passes on its first run, note
+  that in spec/PROGRESS.md and move on; never break working code to manufacture a failure.
 - Make routine decisions yourself. When a choice is non-obvious, pick the option most
   consistent with the spec, add one line about it to spec/PROGRESS.md, and keep going.
 - Don't end a turn with a summary that announces the next step: take the step. Don't offer to
